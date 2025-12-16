@@ -12,17 +12,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Generate index.json for dataSource
         run: |
           TYPE="dataSource"
           DIR="addonDatabase/$TYPE"
-
           if [ -d "$DIR" ]; then
             echo "Generating index.json for $TYPE"
             cd "$DIR"
             echo "[" > index.json
-            # Lista todos os arquivos .yaml e adiciona aspas e vírgula
             ls *.yaml 2>/dev/null | sed 's/^/"/; s/$/"/' | paste -sd "," - >> index.json
             echo "]" >> index.json
             cd ../..
@@ -30,7 +31,7 @@ jobs:
             echo "$DIR does not exist, skipping..."
           fi
 
-      - name: Commit index.json
+      - name: Commit and push if changed
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
@@ -38,5 +39,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
           git add addonDatabase/dataSource/index.json
-          git commit -m "Update dataSource index.json" || echo "No changes to commit"
-          git push
+          # só comita se houver mudanças
+          if ! git diff --cached --quiet; then
+            git commit -m "Update dataSource index.json"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
