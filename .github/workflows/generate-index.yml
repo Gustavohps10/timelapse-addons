@@ -1,0 +1,36 @@
+name: Generate plugin index.json
+
+on:
+  push:
+    paths:
+      - 'addonDatabase/**'    # Roda quando algum arquivo dentro de addonDatabase mudar
+  workflow_dispatch:          # Permite rodar manualmente
+
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate index.json for each plugin type
+        run: |
+          TYPES=("theme" "generic" "dataSource")
+          for TYPE in "${TYPES[@]}"; do
+            DIR="addonDatabase/$TYPE"
+            echo "Generating index.json for $TYPE"
+            cd "$DIR"
+            echo "[" > index.json
+            # Lista todos os arquivos .yaml e adiciona aspas e vírgula
+            ls *.yaml 2>/dev/null | sed 's/^/"/; s/$/"/' | paste -sd "," - >> index.json
+            echo "]" >> index.json
+            cd ../..
+          done
+
+      - name: Commit index.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add addonDatabase/*/index.json
+          git commit -m "Update plugin index.json" || echo "No changes to commit"
+          git push
