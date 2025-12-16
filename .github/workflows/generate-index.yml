@@ -15,7 +15,7 @@ jobs:
 
       - name: Generate index.json for each plugin type
         run: |
-          TYPES=("theme" "generic" "dataSource")
+          TYPES=("dataSource")
           for TYPE in "${TYPES[@]}"; do
             DIR="addonDatabase/$TYPE"
             echo "Generating index.json for $TYPE"
