@@ -3,8 +3,8 @@ name: Generate plugin index.json
 on:
   push:
     paths:
-      - 'addonDatabase/**'    # Roda quando algum arquivo dentro de addonDatabase mudar
-  workflow_dispatch:          # Permite rodar manualmente
+      - 'addonDatabase/**'
+  workflow_dispatch:
 
 jobs:
   generate-index:
@@ -13,11 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Generate index.json for each plugin type
+      - name: Generate index.json for dataSource
         run: |
-          TYPES=("dataSource")
-          for TYPE in "${TYPES[@]}"; do
-            DIR="addonDatabase/$TYPE"
+          TYPE="dataSource"
+          DIR="addonDatabase/$TYPE"
+
+          if [ -d "$DIR" ]; then
             echo "Generating index.json for $TYPE"
             cd "$DIR"
             echo "[" > index.json
@@ -25,12 +26,17 @@ jobs:
             ls *.yaml 2>/dev/null | sed 's/^/"/; s/$/"/' | paste -sd "," - >> index.json
             echo "]" >> index.json
             cd ../..
-          done
+          else
+            echo "$DIR does not exist, skipping..."
+          fi
 
       - name: Commit index.json
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add addonDatabase/*/index.json
-          git commit -m "Update plugin index.json" || echo "No changes to commit"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
+          git add addonDatabase/dataSource/index.json
+          git commit -m "Update dataSource index.json" || echo "No changes to commit"
           git push
